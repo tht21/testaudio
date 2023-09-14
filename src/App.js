@@ -1,6 +1,5 @@
 
 import './App.css';
-import AudioPlayer from './Player';
 import Lyrics from './lyrics';
 function App() {
   return (

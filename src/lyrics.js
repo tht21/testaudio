@@ -5,7 +5,37 @@ function Lyrics({ lyricsUrl }) {
   const [lyrics, setLyrics] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef(null);
+  const canvasRef = useRef(null);
   const audioUrl = 'https://storage.googleapis.com/ikara-storage/tmp/beat.mp3';
+
+  const drawLyrics = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.font = '18px Helvetica'; 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let yPosition = 80;
+    lyrics.forEach((line, lineIndex) => {
+      let xPosition = 300;
+
+      line.forEach((word, wordIndex) => {
+        const nextWordTime = wordIndex + 1 < line.length ? line[wordIndex + 1].time : lineIndex + 1 < lyrics.length ? lyrics[lineIndex + 1][0].time : audioRef.current?.duration || 0;
+        const durationPerChar = (nextWordTime - word.time) / word.text.length;
+
+        [...word.text].forEach((char, charIndex) => {
+          const charStartTime = word.time + (durationPerChar * charIndex);
+          const isHighlighted = currentTime <= charStartTime && currentTime < (charStartTime + durationPerChar);
+          ctx.fillStyle = isHighlighted ? 'white' : '#696969';
+          ctx.fillText(char, xPosition, yPosition);
+          xPosition += ctx.measureText(char).width;
+
+        });
+        xPosition += ctx.measureText(' ').width;
+      });
+
+      yPosition += 30;
+    });
+  };
 
   useEffect(() => {
     fetch(lyricsUrl)
@@ -16,14 +46,10 @@ function Lyrics({ lyricsUrl }) {
             console.error('Failed to parse xml', err);
             return;
           }
-
-          const lines = result.data.param.map(param =>
-
-            param.i.map(word => ({
-              time: parseFloat(word.$.va),
-              text: word._
-            }))
-          );
+          const lines = result.data.param.map(param => param.i.map(word => ({
+            time: parseFloat(word.$.va),
+            text: word._
+          })));
           setLyrics(lines);
         });
       })
@@ -32,10 +58,12 @@ function Lyrics({ lyricsUrl }) {
       });
   }, [lyricsUrl]);
 
+  useEffect(() => {
+    drawLyrics();
+  }, [lyrics, currentTime]);
+
   return (
-
     <body>
-
       <div id="music-player">
         <img id="album-art" />
         <div id="top-bar">
@@ -46,32 +74,7 @@ function Lyrics({ lyricsUrl }) {
           </div>
         </div>
         <div id="lyrics">
-          {lyrics.map((line, lineIndex) => (
-            <p key={lineIndex}>
-              {line.map((word, wordIndex) => {
-                const nextWordTime = wordIndex + 1 < line.length ? line[wordIndex + 1].time : lineIndex + 1 < lyrics.length ? lyrics[lineIndex + 1][0].time : audioRef.current?.duration || 0;
-                const durationPerChar = (nextWordTime - word.time) / word.text.length;
-                return (
-                  [...word.text].map((char, charIndex) => {
-                    const charStartTime = word.time + (durationPerChar * charIndex);
-                    const isHighlighted = currentTime <= charStartTime && currentTime < (charStartTime + durationPerChar);
-                    console.log();
-                    return (
-                      <span
-                        key={`${wordIndex}-${charIndex}`}
-                        style={{
-                          color: isHighlighted ? 'black' : 'white',
-                          transition: 'color 1s linear'
-                        }}
-                      >
-                        {char}
-                      </span>
-                    );
-                  })
-                );
-              })}
-            </p>
-          ))}
+          <canvas ref={canvasRef} width="1000" height="800"></canvas>
         </div>
       </div>
       <div id="player">
@@ -104,9 +107,6 @@ function Lyrics({ lyricsUrl }) {
       </div>
 
     </body>
-
-
-
   );
 }
 
