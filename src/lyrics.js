@@ -8,34 +8,51 @@ function Lyrics({ lyricsUrl }) {
   const canvasRef = useRef(null);
   const audioUrl = 'https://storage.googleapis.com/ikara-storage/tmp/beat.mp3';
 
-  const drawLyrics = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.font = '18px Helvetica'; 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+ const drawLyrics = () => {
+  const canvas = canvasRef.current;
+  const ctx = canvas.getContext('2d');
+  ctx.font = '18px Helvetica'; 
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    let yPosition = 80;
-    lyrics.forEach((line, lineIndex) => {
-      let xPosition = 300;
+  let yPosition = 80;
+  lyrics.forEach((line, lineIndex) => {
+    let xPosition = 300;
 
-      line.forEach((word, wordIndex) => {
-        const nextWordTime = wordIndex + 1 < line.length ? line[wordIndex + 1].time : lineIndex + 1 < lyrics.length ? lyrics[lineIndex + 1][0].time : audioRef.current?.duration || 0;
-        const durationPerChar = (nextWordTime - word.time) / word.text.length;
+    line.forEach((word, wordIndex) => {
+      const nextWordTime = wordIndex + 1 < line.length ? line[wordIndex + 1].time : lineIndex + 1 < lyrics.length ? lyrics[lineIndex + 1][0].time : audioRef.current?.duration || 0;
+      const durationPerChar = (nextWordTime - word.time) / word.text.length;
 
-        [...word.text].forEach((char, charIndex) => {
-          const charStartTime = word.time + (durationPerChar * charIndex);
-          const isHighlighted = currentTime <= charStartTime && currentTime < (charStartTime + durationPerChar);
-          ctx.fillStyle = isHighlighted ? 'white' : '#696969';
-          ctx.fillText(char, xPosition, yPosition);
-          xPosition += ctx.measureText(char).width;
-
-        });
-        xPosition += ctx.measureText(' ').width;
+      [...word.text].forEach((char, charIndex) => {
+        const charStartTime = word.time + (durationPerChar * charIndex);
+        const charEndTime = charStartTime + durationPerChar;
+        let percentagePassed = (currentTime - charStartTime) / (charEndTime - charStartTime);
+      
+        // Clamp the percentage value to be between 0 and 1
+        percentagePassed = Math.min(Math.max(percentagePassed, 0), 1);
+      
+        // Gradient effect
+        const gradient = ctx.createLinearGradient(xPosition, 0, xPosition + ctx.measureText(char).width, 0);
+        
+        if (percentagePassed < 1) {
+          gradient.addColorStop(0, 'white');
+          gradient.addColorStop(percentagePassed, '#696969');
+        } else {
+          gradient.addColorStop(0, 'white');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.fillText(char, xPosition, yPosition);
+        xPosition += ctx.measureText(char).width;
       });
+      
 
-      yPosition += 30;
+      xPosition += ctx.measureText(' ').width;
     });
-  };
+
+    yPosition += 30;
+  });
+};
+
 
   useEffect(() => {
     fetch(lyricsUrl)
